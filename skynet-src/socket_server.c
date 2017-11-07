@@ -80,8 +80,8 @@ struct socket {
 	int64_t wb_size;
 	int fd;
 	int id;
-	uint8_t protocol;
-	uint8_t type;
+	uint16_t protocol;
+	uint32_t type;
 	uint16_t udpconnecting;
 	int64_t warn_size;
 	union {
@@ -412,7 +412,7 @@ force_close(struct socket_server *ss, struct socket *s, struct socket_lock *l, s
 	if (s->dw_buffer) {
 		free_buffer(ss, s->dw_buffer, s->dw_size);
 		s->dw_buffer = NULL;
-}
+	}
 	socket_unlock(l);
 }
 
@@ -708,14 +708,14 @@ send_buffer_(struct socket_server *ss, struct socket *s, struct socket_lock *l, 
 			if (s->low.head)
 				return -1;
 		} 
-			// step 4
+		// step 4
 		assert(send_buffer_empty(s) && s->wb_size == 0);
-			sp_write(ss->event_fd, s->fd, s, false);
+		sp_write(ss->event_fd, s->fd, s, false);			
 
-			if (s->type == SOCKET_TYPE_HALFCLOSE) {
+		if (s->type == SOCKET_TYPE_HALFCLOSE) {
 				force_close(ss, s, l, result);
 				return SOCKET_CLOSE;
-			}
+		}
 		if(s->warn_size > 0){
 				s->warn_size = 0;
 				result->opaque = s->opaque;
@@ -1775,7 +1775,7 @@ socket_server_udp_send(struct socket_server *ss, int id, const struct socket_udp
 	request.u.send_udp.send.sz = sz;
 	request.u.send_udp.send.buffer = (char *)buffer;
 
-	memcpy(request.u.send_udp.address, udp_address, addrsz);	
+	memcpy(request.u.send_udp.address, udp_address, addrsz);
 
 	send_request(ss, &request, 'A', sizeof(request.u.send_udp.send)+addrsz);
 	return 0;

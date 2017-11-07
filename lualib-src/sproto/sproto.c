@@ -242,12 +242,12 @@ import_field(struct sproto *s, struct field *f, const uint8_t * stream) {
 			} else if (f->type == SPROTO_TSTRING) {
 				f->extra = value;	// string if 0 ; binary is 1
 			} else {
-			if (value >= s->type_n)
-				return NULL;	// invalid type index
-			if (f->type >= 0)
-				return NULL;
-			f->type = SPROTO_TSTRUCT;
-			f->st = &s->type[value];
+				if (value >= s->type_n)
+					return NULL;	// invalid type index
+				if (f->type >= 0)
+					return NULL;
+				f->type = SPROTO_TSTRUCT;
+				f->st = &s->type[value];
 			}
 			break;
 		case 3: // tag
@@ -509,15 +509,15 @@ sproto_dump(struct sproto *s) {
 				array[0] = 0;
 			}
 			if (type == SPROTO_TSTRUCT) {
-					type_name = f->st->name;
-				} else {
+				type_name = f->st->name;
+			} else {
 				switch(type) {
 				case SPROTO_TINTEGER:
 					if (f->extra) {
 						type_name = "decimal";
 					} else {
 						type_name = "integer";
-				}
+					}
 					break;
 				case SPROTO_TBOOLEAN:
 					type_name = "boolean";
@@ -531,7 +531,7 @@ sproto_dump(struct sproto *s) {
 				default:
 					type_name = "invalid";
 					break;
-			}
+				}
 			}
 			printf("\t%s (%d) %s%s", f->name, f->tag, array, type_name);
 			if (type == SPROTO_TINTEGER && f->extra > 0) {

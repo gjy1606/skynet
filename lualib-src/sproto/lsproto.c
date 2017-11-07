@@ -709,13 +709,16 @@ push_default(const struct sproto_arg *args, int array) {
 			lua_pushinteger(L, 0);
 		break;
 	case SPROTO_TREAL:
-		lua_pushnumber(L, 0.0);
+		lua_pushnumber(L, 0);
 		break;
 	case SPROTO_TBOOLEAN:
 		lua_pushboolean(L, 0);
 		break;
 	case SPROTO_TSTRING:
 		lua_pushliteral(L, "");
+		break;
+	case SPROTO_TVARIANT:
+		lua_pushnil(L);
 		break;
 	case SPROTO_TSTRUCT:
 		if (array) {

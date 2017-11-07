@@ -82,8 +82,10 @@ _init_env(lua_State *L) {
 int sigign() {
 	struct sigaction sa;
 	sa.sa_handler = SIG_IGN;
+#ifndef _MSC_VER
 	sa.sa_flags = 0;
 	sigemptyset(&sa.sa_mask);
+#endif
 	sigaction(SIGPIPE, &sa, 0);
 	return 0;
 }

@@ -144,9 +144,9 @@ function convert.type(all, obj)
 				if fieldtype == "integer" then
 					field.decimal = mainkey
 				else
-				assert(field.array)
-				field.key = mainkey
-			end
+					assert(field.array)
+					field.key = mainkey
+				end
 			end
 			field.typename = fieldtype
 		else
@@ -219,7 +219,7 @@ local function check_protocol(r)
 		local request = v.request
 		local response = v.response
 		local p = map[tag]
-		
+
 		if p then
 			error(string.format("redefined protocol tag %d at %s", tag, name))
 		end
@@ -304,7 +304,7 @@ local function packfield(f)
 		if f.extra then
 			table.insert(strtbl, packvalue(f.extra))	-- f.buildin can be integer or string
 		else
-		table.insert(strtbl, "\1\0")	-- skip (tag = 2)
+			table.insert(strtbl, "\1\0")	-- skip (tag = 2)
 		end
 		table.insert(strtbl, packvalue(f.tag))		-- tag (tag = 3)
 	else
@@ -374,9 +374,6 @@ local function packtype(name, t, alltypes)
 end
 
 local function packproto(name, p, alltypes)
---	if p.request == nil then
---		error(string.format("Protocol %s need request", name))
---	end
 	if p.request then
 		local request = alltypes[p.request]
 		if request == nil then
