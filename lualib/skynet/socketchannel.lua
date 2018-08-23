@@ -77,17 +77,6 @@ local function wakeup_all(self, errmsg)
 	end
 end
 
-local function exit_thread(self)
-	local co = coroutine.running()
-	if self.__dispatch_thread == co then
-		self.__dispatch_thread = nil
-		local connecting = self.__connecting_thread
-		if connecting then
-			skynet.wakeup(connecting)
-		end
-	end
-end
-
 local function dispatch_by_session(self)
 	local response = self.__response
 	-- response() return session
@@ -124,7 +113,6 @@ local function dispatch_by_session(self)
 			wakeup_all(self, errormsg)
 		end
 	end
-	exit_thread(self)
 end
 
 local function pop_response(self)
@@ -153,6 +141,25 @@ local function push_response(self, response, co)
 	end
 end
 
+local function get_response(func, sock)
+	local result_ok, result_data, padding = func(sock)
+	if result_ok and padding then
+		local result = { result_data }
+		local index = 2
+		repeat
+			result_ok, result_data, padding = func(sock)
+			if not result_ok then
+				return result_ok, result_data
+			end
+			result[index] = result_data
+			index = index + 1
+		until not padding
+		return true, result
+	else
+		return result_ok, result_data
+	end
+end
+
 local function dispatch_by_order(self)
 	while self.__sock do
 		local func, co = pop_response(self)
@@ -161,23 +168,15 @@ local function dispatch_by_order(self)
 			wakeup_all(self, "channel_closed")
 			break
 		end
-		local ok, result_ok, result_data, padding = pcall(func, self.__sock)
+		local ok, result_ok, result_data = pcall(get_response, func, self.__sock)
 		if ok then
-			if padding and result_ok then
-				-- if padding is true, wait for next result_data
-				-- self.__result_data[co] is a table
-				local result = self.__result_data[co] or {}
-				self.__result_data[co] = result
-				table.insert(result, result_data)
+			self.__result[co] = result_ok
+			if result_ok and self.__result_data[co] then
+				table.insert(self.__result_data[co], result_data)
 			else
-				self.__result[co] = result_ok
-				if result_ok and self.__result_data[co] then
-					table.insert(self.__result_data[co], result_data)
-				else
-					self.__result_data[co] = result_data
-				end
-				skynet.wakeup(co)
+				self.__result_data[co] = result_data
 			end
+			skynet.wakeup(co)
 		else
 			close_channel_socket(self)
 			local errmsg
@@ -190,7 +189,6 @@ local function dispatch_by_order(self)
 			wakeup_all(self, errmsg)
 		end
 	end
-	exit_thread(self)
 end
 
 local function dispatch_function(self)
@@ -222,11 +220,21 @@ local function connect_backup(self)
 	end
 end
 
+local function term_dispatch_thread(self)
+	if not self.__response and self.__dispatch_thread then
+		-- dispatch by order, send close signal to dispatch thread
+		push_response(self, true, false)	-- (true, false) is close signal
+	end
+end
+
 local function connect_once(self)
 	if self.__closed then
 		return false
 	end
 	assert(not self.__sock and not self.__authcoroutine)
+	-- term current dispatch thread (send a sigal)
+	term_dispatch_thread(self, self.__dispatch_thread)
+
 	local fd,err = socket.open(self.__host, self.__port)
 	if not fd then
 		fd = connect_backup(self)
@@ -238,8 +246,17 @@ local function connect_once(self)
 		socketdriver.nodelay(fd)
 	end
 
+	while self.__dispatch_thread do
+		-- wait for dispatch thread exit
+		skynet.yield()
+	end
+
 	self.__sock = setmetatable( {fd} , channel_socket_meta )
-	self.__dispatch_thread = skynet.fork(dispatch_function(self), self)
+	self.__dispatch_thread = skynet.fork(function()
+		pcall(dispatch_function(self), self)
+		-- clear dispatch_thread
+		self.__dispatch_thread = nil
+	end)
 
 	if self.__auth then
 		self.__authcoroutine = coroutine.running()
@@ -342,18 +359,7 @@ local function block_connect(self, once)
 end
 
 function channel:connect(once)
-	if self.__closed then
-		if self.__dispatch_thread then
-			-- closing, wait
-			assert(self.__connecting_thread == nil, "already connecting")
-			local co = coroutine.running()
-			self.__connecting_thread = co
-			skynet.wait(co)
-			self.__connecting_thread = nil
-		end
-		self.__closed = false
-	end
-
+	self.__closed = false
 	return block_connect(self, once)
 end
 
@@ -426,13 +432,9 @@ end
 
 function channel:close()
 	if not self.__closed then
-		local thread = self.__dispatch_thread
+		term_dispatch_thread(self)
 		self.__closed = true
 		close_channel_socket(self)
-		if not self.__response and self.__dispatch_thread == thread and thread then
-			-- dispatch by order, send close signal to dispatch thread
-			push_response(self, true, false)	-- (true, false) is close signal
-		end
 	end
 end
 
