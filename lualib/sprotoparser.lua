@@ -164,20 +164,9 @@ end
 local function adjust(r)
 	local result = { type = {} , protocol = {} }
 
-	local last_tag = -1
-
 	for _, obj in ipairs(r) do
 		local set = result[obj.type]
 		local name = obj[1]
-		local tag = obj[2]
-		if tag == 0 then
-			assert(last_tag > 0)
-			tag = last_tag + 1
-			obj[2] = tag
-			last_tag = tag
-		elseif type(tag) == "number" then
-			last_tag = tag
-		end
 		assert(set[name] == nil , "redefined " .. name)
 		set[name] = convert[obj.type](result,obj)
 	end
@@ -187,11 +176,9 @@ end
 
 local buildin_types = {
 	integer = 0,
-	real = 1,
-	boolean = 2,
-	string = 3,
-	variant = 4,
-	binary = 3,	-- binary is a sub type of string
+	boolean = 1,
+	string = 2,
+	binary = 2,	-- binary is a sub type of string
 }
 
 local function checktype(types, ptype, t)

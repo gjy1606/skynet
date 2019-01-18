@@ -91,8 +91,8 @@ struct socket {
 	volatile uint32_t sending;
 	int fd;
 	int id;
-	uint16_t protocol;
-	uint32_t type;
+	uint8_t protocol;
+	uint8_t type;
 	uint16_t udpconnecting;
 	int64_t warn_size;
 	union {
@@ -377,9 +377,7 @@ socket_server_create(uint64_t time) {
 	ss->event_index = 0;
 	memset(&ss->soi, 0, sizeof(ss->soi));
 	FD_ZERO(&ss->rfds);
-#ifndef _MSC_VER
 	assert(ss->recvctrl_fd < FD_SETSIZE);
-#endif
 
 	return ss;
 }
@@ -534,13 +532,8 @@ open_socket(struct socket_server *ss, struct request_open * request, struct sock
 			continue;
 		}
 		socket_keepalive(sock);
-#ifdef _MSC_VER
-		status = connect( sock, ai_ptr->ai_addr, ai_ptr->ai_addrlen);
-		sp_nonblocking(sock);
-#else
 		sp_nonblocking(sock);
 		status = connect( sock, ai_ptr->ai_addr, ai_ptr->ai_addrlen);
-#endif
 		if ( status != 0 && errno != EINPROGRESS) {
 			close(sock);
 			sock = -1;

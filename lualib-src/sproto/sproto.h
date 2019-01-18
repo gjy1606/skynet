@@ -11,11 +11,9 @@ struct sproto_type;
 
 // type (sproto_arg.type)
 #define SPROTO_TINTEGER 0
-#define SPROTO_TREAL 1
-#define SPROTO_TBOOLEAN 2
-#define SPROTO_TSTRING 3
-#define SPROTO_TVARIANT 4
-#define SPROTO_TSTRUCT 5
+#define SPROTO_TBOOLEAN 1
+#define SPROTO_TSTRING 2
+#define SPROTO_TSTRUCT 3
 
 // sub type of string (sproto_arg.extra)
 #define SPROTO_TSTRING_STRING 0

@@ -24,7 +24,7 @@ JEMALLOC_INC := 3rd/jemalloc/include/jemalloc
 
 all : jemalloc
 	
-.PHONY : jemalloc libmbedtls update3rd
+.PHONY : jemalloc update3rd
 
 MALLOC_STATICLIB := $(JEMALLOC_STATICLIB)
 
@@ -39,27 +39,15 @@ $(JEMALLOC_STATICLIB) : 3rd/jemalloc/Makefile
 
 jemalloc : $(MALLOC_STATICLIB)
 
-# libmbedtls
-
-MBEDTLS_STATICLIB := 3rd/mbedtls/library/libmbedcrypto.a 3rd/mbedtls/library/libmbedtls.a 3rd/mbedtls/library/libmbedx509.a
-MBEDTLS_INC := 3rd/mbedtls/include
-
-$(MBEDTLS_STATICLIB) : 3rd/mbedtls/Makefile
-	cd 3rd/mbedtls && $(MAKE) CC=$(CC)
-
-TLS_STATICLIB := $(MBEDTLS_STATICLIB)
-
-libmbedtls : $(TLS_STATICLIB)
-
 update3rd :
-	rm -rf 3rd/jemalloc 3rd/mbedtls && git submodule update --init
+	rm -rf 3rd/jemalloc && git submodule update --init
 
 # skynet
 
 CSERVICE = snlua logger gate harbor
 LUA_CLIB = skynet \
   client \
-  bson md5 sproto lpeg mbedtls cjson
+  bson md5 sproto lpeg
 
 LUA_CLIB_SKYNET = \
   lua-skynet.c lua-seri.c \
@@ -75,18 +63,6 @@ LUA_CLIB_SKYNET = \
   lua-stm.c \
   lua-debugchannel.c \
   lua-datasheet.c \
-  lua-msgpack.c \
-  \
-  ltask/ltask.c \
-  ltask/handlemap.c \
-  ltask/queue.c \
-  ltask/schedule.c \
-  ltask/serialize.c \
-  \
-  lsignal/lsignal.c \
-  \
-  zset/skiplist.c \
-  zset/lua-skiplist.c \
   \
 
 SKYNET_SRC = skynet_main.c skynet_handle.c skynet_module.c skynet_mq.c \
@@ -100,7 +76,7 @@ all : \
   $(foreach v, $(LUA_CLIB), $(LUA_CLIB_PATH)/$(v).so) 
 
 $(SKYNET_BUILD_PATH)/skynet : $(foreach v, $(SKYNET_SRC), skynet-src/$(v)) $(LUA_LIB) $(MALLOC_STATICLIB)
-	$(CC) $(CFLAGS) -o $@ $^ -Wl,-rpath,./ -Iskynet-src -I$(JEMALLOC_INC) $(LDFLAGS) $(EXPORT) $(SKYNET_LIBS) $(SKYNET_DEFINES)
+	$(CC) $(CFLAGS) -o $@ $^ -Iskynet-src -I$(JEMALLOC_INC) $(LDFLAGS) $(EXPORT) $(SKYNET_LIBS) $(SKYNET_DEFINES)
 
 $(LUA_CLIB_PATH) :
 	mkdir $(LUA_CLIB_PATH)
@@ -130,23 +106,6 @@ $(LUA_CLIB_PATH)/client.so : lualib-src/lua-clientsocket.c lualib-src/lua-crypt.
 $(LUA_CLIB_PATH)/sproto.so : lualib-src/sproto/sproto.c lualib-src/sproto/lsproto.c | $(LUA_CLIB_PATH)
 	$(CC) $(CFLAGS) $(SHARED) -Ilualib-src/sproto $^ -o $@ 
 
-$(LUA_CLIB_PATH)/mbedtls.so : lualib-src/mbedtls/lua-mbedtls.c \
-	lualib-src/mbedtls/lua-buffer.c \
-	lualib-src/mbedtls/src/aes.c \
-	lualib-src/mbedtls/src/base64.c\
-	lualib-src/mbedtls/src/ctr_drbg.c \
-	lualib-src/mbedtls/src/entropy.c \
-	lualib-src/mbedtls/src/md.c \
-	lualib-src/mbedtls/src/pk.c \
-	| $(LUA_CLIB_PATH)
-	$(CC) $(CFLAGS) $(SHARED) -Ilualib-src/mbedtls -I$(MBEDTLS_INC) -L3rd/mbedtls/library -lmbedcrypto -lmbedtls -lmbedx509 $^ -o $@
-
-$(LUA_CLIB_PATH)/cjson.so : lualib-src/lua-cjson/fpconv.c \
-	lualib-src/lua-cjson/strbuf.c \
-	lualib-src/lua-cjson/lua_cjson.c \
-	| $(LUA_CLIB_PATH)
-	$(CC) $(CFLAGS) $(SHARED) -Ilualib-src/lua-cjson $^ -o $@
-
 $(LUA_CLIB_PATH)/lpeg.so : 3rd/lpeg/lpcap.c 3rd/lpeg/lpcode.c 3rd/lpeg/lpprint.c 3rd/lpeg/lptree.c 3rd/lpeg/lpvm.c | $(LUA_CLIB_PATH)
 	$(CC) $(CFLAGS) $(SHARED) -I3rd/lpeg $^ -o $@ 
 
@@ -156,9 +115,6 @@ clean :
 cleanall: clean
 ifneq (,$(wildcard 3rd/jemalloc/Makefile))
 	cd 3rd/jemalloc && $(MAKE) clean && rm Makefile
-endif
-ifneq (,$(wildcard 3rd/mbedtls/Makefile))
-	cd 3rd/mbedtls && $(MAKE) clean
 endif
 	cd 3rd/lua && $(MAKE) clean
 	rm -f $(LUA_STATICLIB)

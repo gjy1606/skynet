@@ -490,12 +490,6 @@ sproto_release(struct sproto * s) {
 void
 sproto_dump(struct sproto *s) {
 	int i,j;
-	static const char * buildin[] = {
-		"integer",
-		"real",
-		"boolean",
-		"string",
-	};
 	printf("=== %d types ===\n", s->type_n);
 	for (i=0;i<s->type_n;i++) {
 		struct sproto_type *t = &s->type[i];
@@ -951,7 +945,6 @@ sproto_encode(const struct sproto_type *st, void * buffer, int size, sproto_call
 			args.index = 0;
 			switch(type) {
 			case SPROTO_TINTEGER:
-			case SPROTO_TREAL:
 			case SPROTO_TBOOLEAN: {
 				union {
 					uint64_t u64;
@@ -982,7 +975,6 @@ sproto_encode(const struct sproto_type *st, void * buffer, int size, sproto_call
 				break;
 			}
 			case SPROTO_TSTRUCT:
-			case SPROTO_TVARIANT:
 			case SPROTO_TSTRING:
 				sz = encode_object(cb, &args, data, size);
 				break;
@@ -1115,7 +1107,6 @@ decode_array(sproto_callback cb, struct sproto_arg *args, uint8_t * stream) {
 		}
 		break;
 	case SPROTO_TSTRING:
-	case SPROTO_TVARIANT:
 	case SPROTO_TSTRUCT:
 		return decode_array_object(cb, args, stream, sz);
 	default:
@@ -1186,8 +1177,7 @@ sproto_decode(const struct sproto_type *st, const void * data, int size, sproto_
 				}
 			} else {
 				switch (f->type) {
-				case SPROTO_TINTEGER:
-				case SPROTO_TREAL: {
+				case SPROTO_TINTEGER: {
 					uint32_t sz = todword(currentdata);
 					if (sz == SIZEOF_INT32) {
 						uint64_t v = expand64(todword(currentdata + SIZEOF_LENGTH));
@@ -1207,7 +1197,6 @@ sproto_decode(const struct sproto_type *st, const void * data, int size, sproto_
 					break;
 				}
 				case SPROTO_TSTRING:
-				case SPROTO_TVARIANT:
 				case SPROTO_TSTRUCT: {
 					uint32_t sz = todword(currentdata);
 					args.value = currentdata+SIZEOF_LENGTH;
@@ -1220,7 +1209,7 @@ sproto_decode(const struct sproto_type *st, const void * data, int size, sproto_
 					return -1;
 				}
 			}
-		} else if (f->type != SPROTO_TINTEGER && f->type != SPROTO_TREAL && f->type != SPROTO_TBOOLEAN) {
+		} else if (f->type != SPROTO_TINTEGER && f->type != SPROTO_TBOOLEAN) {
 			return -1;
 		} else {
 			uint64_t v = value;

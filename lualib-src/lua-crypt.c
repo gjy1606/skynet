@@ -9,8 +9,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include <unistd.h>
-
 #define SMALL_CHUNK 256
 
 /* the eight DES S-boxes */

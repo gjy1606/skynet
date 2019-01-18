@@ -126,7 +126,7 @@ skynet.start(function()
 				t[k] = tostring(v)
 			end
 			socket.write(id, table.concat(t,"\t"))
-			socket.write(id, "\r\n")
+			socket.write(id, "\n")
 		end
 		socket.start(id)
 		skynet.fork(console_main_loop, id , print)

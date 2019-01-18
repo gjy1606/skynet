@@ -30,7 +30,7 @@ union value {
 
 struct node {
 	union value v;
-	int64_t key;	// integer key or index of string table
+	int key;	// integer key or index of string table
 	int next;	// next slot index
 	uint32_t keyhash;
 	uint8_t keytype;	// key type must be integer or string
@@ -189,7 +189,7 @@ setarray(struct context *ctx, lua_State *L, int index, int key) {
 }
 
 static int
-ishashkey(struct context * ctx, lua_State *L, int index, int64_t *key, uint32_t *keyhash, int *keytype) {
+ishashkey(struct context * ctx, lua_State *L, int index, int *key, uint32_t *keyhash, int *keytype) {
 	int sizearray = ctx->tbl->sizearray;
 	int kt = lua_type(L, index);
 	if (kt == LUA_TNUMBER) {
@@ -214,7 +214,7 @@ fillnocolliding(lua_State *L, struct context *ctx) {
 	struct table * tbl = ctx->tbl;
 	lua_pushnil(L);
 	while (lua_next(L, 1) != 0) {
-		int64_t key;
+		int key;
 		int keytype;
 		uint32_t keyhash;
 		if (!ishashkey(ctx, L, -2, &key, &keyhash, &keytype)) {
@@ -242,7 +242,7 @@ fillcolliding(lua_State *L, struct context *ctx) {
 	int i;
 	lua_pushnil(L);
 	while (lua_next(L, 1) != 0) {
-		int64_t key;
+		int key;
 		int keytype;
 		uint32_t keyhash;
 		if (ishashkey(ctx, L, -2, &key, &keyhash, &keytype)) {
@@ -499,7 +499,7 @@ pushvalue(lua_State *L, lua_State *sL, uint8_t vt, union value *v) {
 }
 
 static struct node *
-lookup_key(struct table *tbl, uint32_t keyhash, int64_t key, int keytype, const char *str, size_t sz) {
+lookup_key(struct table *tbl, uint32_t keyhash, int key, int keytype, const char *str, size_t sz) {
 	if (tbl->sizehash == 0)
 		return NULL;
 	struct node *n = &tbl->hash[keyhash % tbl->sizehash];
@@ -534,7 +534,7 @@ lindexconf(lua_State *L) {
 	struct table *tbl = get_table(L,1);
 	int kt = lua_type(L,2);
 	uint32_t keyhash;
-	int64_t key = 0;
+	int key = 0;
 	int keytype;
 	size_t sz = 0;
 	const char * str = NULL;
@@ -542,7 +542,7 @@ lindexconf(lua_State *L) {
 		if (!lua_isinteger(L, 2)) {
 			return luaL_error(L, "Invalid key %f", lua_tonumber(L, 2));
 		}
-		key = (int64_t)lua_tointeger(L, 2);
+		key = (int)lua_tointeger(L, 2);
 		if (key > 0 && key <= tbl->sizearray) {
 			--key;
 			pushvalue(L, tbl->L, tbl->arraytype[key], &tbl->array[key]);
@@ -603,7 +603,7 @@ lnextkey(lua_State *L) {
 	}
 	int kt = lua_type(L,2);
 	uint32_t keyhash;
-	int64_t key = 0;
+	int key = 0;
 	int keytype;
 	size_t sz=0;
 	const char *str = NULL;
@@ -612,7 +612,7 @@ lnextkey(lua_State *L) {
 		if (!lua_isinteger(L, 2)) {
 			return 0;
 		}
-		key = (int64_t)lua_tointeger(L, 2);
+		key = (int)lua_tointeger(L, 2);
 		if (key > 0 && key <= sizearray) {
 			lua_Integer i;
 			for (i=key;i<sizearray;i++) {

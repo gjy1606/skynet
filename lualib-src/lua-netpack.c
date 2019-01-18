@@ -12,8 +12,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <unistd.h>
-
 #define QUEUESIZE 1024
 #define HASHSIZE 4096
 #define SMALLSTRING 2048
@@ -245,14 +243,14 @@ filter_data_(lua_State *L, int fd, uint8_t * buffer, int size) {
 		}
 		int need = uc->pack.size - uc->read;
 		if (size < need) {
-			memcpy((uint8_t*)uc->pack.buffer + uc->read, buffer, size);
+			memcpy(uc->pack.buffer + uc->read, buffer, size);
 			uc->read += size;
 			int h = hash_fd(fd);
 			uc->next = q->hash[h];
 			q->hash[h] = uc;
 			return 1;
 		}
-		memcpy((uint8_t*)uc->pack.buffer + uc->read, buffer, need);
+		memcpy(uc->pack.buffer + uc->read, buffer, need);
 		buffer += need;
 		size -= need;
 		if (size == 0) {
@@ -332,7 +330,7 @@ pushstring(lua_State *L, const char * msg, int size) {
 	integer size
 	return
 		userdata queue
-		string type (lua_upvalueindex(TYPE_*))
+		integer type
 		integer fd
 		string msg | lightuserdata/integer
  */
