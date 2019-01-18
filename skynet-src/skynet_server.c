@@ -719,7 +719,7 @@ skynet_send(struct skynet_context * context, uint32_t source, uint32_t destinati
 		if (type & PTYPE_TAG_DONTCOPY) {
 			skynet_free(data);
 		}
-		return -1;
+		return -2;
 	}
 	_filter_args(context, type, &session, (void **)&data, &sz);
 
@@ -728,6 +728,12 @@ skynet_send(struct skynet_context * context, uint32_t source, uint32_t destinati
 	}
 
 	if (destination == 0) {
+		if (data) {
+			skynet_error(context, "Destination address can't be 0");
+			skynet_free(data);
+			return -1;
+		}
+
 		return session;
 	}
 	if (skynet_harbor_message_isremote(destination)) {
@@ -769,6 +775,13 @@ skynet_sendname(struct skynet_context * context, uint32_t source, const char * a
 			return -1;
 		}
 	} else {
+		if ((sz & MESSAGE_TYPE_MASK) != sz) {
+			skynet_error(context, "The message to %s is too large", addr);
+			if (type & PTYPE_TAG_DONTCOPY) {
+				skynet_free(data);
+			}
+			return -2;
+		}
 		_filter_args(context, type, &session, (void **)&data, &sz);
 
 		struct remote_message * rmsg = skynet_malloc(sizeof(*rmsg));

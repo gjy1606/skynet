@@ -133,6 +133,7 @@ thread_timer(void *p) {
 	skynet_initthread(THREAD_TIMER);
 	for (;;) {
 		skynet_updatetime();
+		skynet_socket_updatetime();
 		CHECK_ABORT
 		wakeup(m,m->count-1);
 		usleep(2500);
@@ -287,6 +288,8 @@ skynet_start(struct skynet_config * config) {
 		fprintf(stderr, "Can't launch %s service\n", config->logservice);
 		exit(1);
 	}
+
+	skynet_handle_namehandle(skynet_context_handle(ctx), "logger");
 
 	bootstrap(ctx, config->bootstrap);
 
