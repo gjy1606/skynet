@@ -256,11 +256,11 @@ end
 
 function skynet.self()
 	return c.addresscommand "REG"
-	end
+end
 
 function skynet.localname(name)
 	return c.addresscommand("QUERY", name)
-	end
+end
 
 skynet.now = c.now
 skynet.hpc = c.hpc	-- high performance counter
@@ -413,7 +413,7 @@ function skynet.ret(msg, sz)
 	if co_session == 0 then
 		if sz ~= nil then
 			c.trash(msg, sz)
-end
+		end
 		return false	-- send don't need ret
 	end
 	local co_address = session_coroutine_address[running_thread]
@@ -453,14 +453,7 @@ function skynet.response(pack)
 	end
 	local function response(ok, ...)
 		if ok == "TEST" then
-			if dead_service[co_address] then
-				release_watching(co_address)
-				unresponse[response] = nil
-				pack = false
-				return false
-			else
-				return true
-			end
+			return unresponse[response] ~= nil
 		end
 		if not pack then
 			error "Can't response more than once"
@@ -603,12 +596,12 @@ local function raw_dispatch_message(prototype, msg, sz, session, source)
 		else
 			trace_source[source] = nil
 			if session ~= 0 then
-			c.send(source, skynet.PTYPE_ERROR, session, "")
-		else
-			unknown_request(session, source, msg, sz, proto[prototype].name)
+				c.send(source, skynet.PTYPE_ERROR, session, "")
+			else
+				unknown_request(session, source, msg, sz, proto[prototype].name)
+			end
 		end
 	end
-end
 end
 
 function skynet.dispatch_message(...)
