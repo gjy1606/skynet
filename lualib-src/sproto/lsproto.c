@@ -193,6 +193,18 @@ encode(const struct sproto_arg *args) {
 			return 8;
 		}
 	}
+	case SPROTO_TREAL: {
+		lua_Number v;
+		if (!lua_isnumber(L, -1)) {
+			return luaL_error(L, ".%s[%d] is not an number (Is a %s)", 
+				args->tagname, args->index, lua_typename(L, lua_type(L, -1)));
+		} else {
+			v = lua_tonumber(L, -1);
+		}
+		lua_pop(L,1);
+		*(lua_Number *)args->value = (lua_Number)v;
+		return 8;
+	}
 	case SPROTO_TBOOLEAN: {
 		int v = lua_toboolean(L, -1);
 		if (!lua_isboolean(L,-1)) {
@@ -217,6 +229,47 @@ encode(const struct sproto_arg *args) {
 		memcpy(args->value, str, sz);
 		lua_pop(L,1);
 		return sz;
+	}
+	case SPROTO_TVARIANT: {
+		int type = lua_type(L, -1);
+		switch(type) {
+		case LUA_TNUMBER: {
+			int sz = 8 + 1;
+			lua_Number v = lua_tonumber(L, -1);
+			lua_pop(L,1);
+			if(sz > args->length)
+				return -1;
+			char *buf = (char *)args->value;
+			*buf++ = SPROTO_TREAL;
+			*(lua_Number *)(buf) = (lua_Number)v;
+			return sz;
+		}
+		case LUA_TSTRING: {
+			size_t sz = 0;
+			const char * str = lua_tolstring(L, -1, &sz);
+			lua_pop(L,1);
+			if (sz + 1 > args->length)
+				return -1;
+			char *buf = (char *)args->value;
+			*buf++ = SPROTO_TSTRING;
+			memcpy(buf, str, sz);
+			return sz;	// The length of empty string is 1.
+		}
+		case LUA_TBOOLEAN: {
+			int sz = 2;
+			int v = lua_toboolean(L, -1);
+			lua_pop(L,1);
+			if (sz > args->length)
+				return -1;
+			char *buf = (char *)args->value;
+			*buf++ = SPROTO_TBOOLEAN;
+			*buf++ = v;
+			return sz;
+		}
+		default:
+			return luaL_error(L, "Invalid variant type %s", lua_typename(L, type));
+		}
+		return 0;
 	}
 	case SPROTO_TSTRUCT: {
 		struct encode_ud sub;
@@ -356,6 +409,11 @@ decode(const struct sproto_arg *args) {
 		}
 		break;
 	}
+	case SPROTO_TREAL: {
+		lua_Number v = *(lua_Number*)args->value;
+		lua_pushnumber(L, v);
+		break;
+	}
 	case SPROTO_TBOOLEAN: {
 		int v = *(uint64_t*)args->value;
 		lua_pushboolean(L,v);
@@ -363,6 +421,24 @@ decode(const struct sproto_arg *args) {
 	}
 	case SPROTO_TSTRING: {
 		lua_pushlstring(L, args->value, args->length);
+		break;
+	}
+	case SPROTO_TVARIANT: {
+		char *buf = args->value;
+		int type = *buf++;
+		switch(type) {
+		case SPROTO_TREAL:
+			lua_pushnumber(L, *(lua_Number *) buf);
+			break;
+		case SPROTO_TSTRING:
+			lua_pushlstring(L, buf, args->length);
+			break;
+		case SPROTO_TBOOLEAN:
+			lua_pushboolean(L, *buf);
+			break;
+		default:
+			return luaL_error(L, "Unknown variant type: %d", type);
+		}
 		break;
 	}
 	case SPROTO_TSTRUCT: {
@@ -633,11 +709,17 @@ push_default(const struct sproto_arg *args, int array) {
 		else
 			lua_pushinteger(L, 0);
 		break;
+	case SPROTO_TREAL:
+		lua_pushnumber(L, 0);
+		break;
 	case SPROTO_TBOOLEAN:
 		lua_pushboolean(L, 0);
 		break;
 	case SPROTO_TSTRING:
 		lua_pushliteral(L, "");
+		break;
+	case SPROTO_TVARIANT:
+		lua_pushnil(L);
 		break;
 	case SPROTO_TSTRUCT:
 		if (array) {

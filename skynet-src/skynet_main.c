@@ -14,6 +14,10 @@
 #include <signal.h>
 #include <assert.h>
 
+#ifdef _MSC_VER
+#include "cpoll/cpoll.h"
+#endif
+
 static int
 optint(const char *key, int opt) {
 	const char * str = skynet_getenv(key);
@@ -78,8 +82,10 @@ _init_env(lua_State *L) {
 int sigign() {
 	struct sigaction sa;
 	sa.sa_handler = SIG_IGN;
+#ifndef _MSC_VER
 	sa.sa_flags = 0;
 	sigemptyset(&sa.sa_mask);
+#endif
 	sigaction(SIGPIPE, &sa, 0);
 	return 0;
 }
@@ -125,6 +131,9 @@ main(int argc, char *argv[]) {
 			"usage: skynet configfilename\n");
 		return 1;
 	}
+#ifdef _MSC_VER
+	cpoll_startup();
+#endif
 
 	luaS_initshr();
 	skynet_globalinit();
@@ -163,6 +172,10 @@ main(int argc, char *argv[]) {
 	skynet_start(&config);
 	skynet_globalexit();
 	luaS_exitshr();
+
+#ifdef _MSC_VER
+	cpoll_cleanup();
+#endif
 
 	return 0;
 }

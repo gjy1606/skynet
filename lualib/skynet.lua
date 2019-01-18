@@ -206,6 +206,16 @@ function skynet.timeout(ti, func)
 	return co	-- for debug
 end
 
+function skynet.timer(ti, func)
+	local f
+	f = function()
+		if func(ti) then
+			skynet.timeout(ti, f)
+		end
+	end
+	skynet.timeout(ti, f)
+end
+
 local function suspend_sleep(session, token)
 	local tag = session_coroutine_tracetag[running_thread]
 	if tag then c.trace(tag, "sleep", 2) end
@@ -246,11 +256,11 @@ end
 
 function skynet.self()
 	return c.addresscommand "REG"
-end
+	end
 
 function skynet.localname(name)
 	return c.addresscommand("QUERY", name)
-end
+	end
 
 skynet.now = c.now
 skynet.hpc = c.hpc	-- high performance counter
@@ -403,7 +413,7 @@ function skynet.ret(msg, sz)
 	if co_session == 0 then
 		if sz ~= nil then
 			c.trash(msg, sz)
-		end
+end
 		return false	-- send don't need ret
 	end
 	local co_address = session_coroutine_address[running_thread]
@@ -443,7 +453,14 @@ function skynet.response(pack)
 	end
 	local function response(ok, ...)
 		if ok == "TEST" then
-			return unresponse[response] ~= nil
+			if dead_service[co_address] then
+				release_watching(co_address)
+				unresponse[response] = nil
+				pack = false
+				return false
+			else
+				return true
+		end
 		end
 		if not pack then
 			error "Can't response more than once"
@@ -586,12 +603,12 @@ local function raw_dispatch_message(prototype, msg, sz, session, source)
 		else
 			trace_source[source] = nil
 			if session ~= 0 then
-				c.send(source, skynet.PTYPE_ERROR, session, "")
-			else
-				unknown_request(session, source, msg, sz, proto[prototype].name)
-			end
+			c.send(source, skynet.PTYPE_ERROR, session, "")
+		else
+			unknown_request(session, source, msg, sz, proto[prototype].name)
 		end
 	end
+end
 end
 
 function skynet.dispatch_message(...)
@@ -649,6 +666,13 @@ end
 
 skynet.error = c.error
 skynet.tracelog = c.trace
+
+function skynet.log(msg, ...)
+    local msg = string.format(msg, ...)
+    msg = "[" .. os.date() .. "]" .. msg
+    
+    c.error(msg)
+end
 
 -- true: force on
 -- false: force off
