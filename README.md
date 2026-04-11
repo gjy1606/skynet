@@ -1,41 +1,16 @@
 ## ![skynet logo](https://github.com/cloudwu/skynet/wiki/image/skynet_metro.jpg)
 
+## 简介
+- 基于 [cloudwu/skynet @tag v1.8.0](https://github.com/cloudwu/skynet/tree/v1.8.0) 版本为 `Windows` 提供支持
+- 版本追踪：
+  - [cloudwu/skynet @tag v1.8.0](https://github.com/cloudwu/skynet/tree/v1.8.0) => [gjy1606/skynet @vs2013](https://github.com/gjy1606/skynet/tree/vs2013) 进行最简 `Windows` 支持,无私有内容(有提PR的能力并且可以贡献给他人使用)
+  - [gjy1606/skynet @vs2013](https://github.com/gjy1606/skynet/tree/vs2013) == [本地 guojiayi/skynet-hcplay @vs2013](http://192.168.10.252/guojiayi/skynet-hcplay) => [本地 guojiayi/skynet-hcplay @developer](http://192.168.10.252/guojiayi/skynet-hcplay/-/tree/developer) 进行项目私有内容支持
+
 Skynet is a multi-user Lua framework supporting the actor model, often used in games.
 
 [It is heavily used in the Chinese game industry](https://github.com/cloudwu/skynet/wiki/Uses), but is also now spreading to other industries, and to English-centric developers. To visit related sites, visit the Chinese pages using something like Google or Deepl translate.
 
 The community is friendly and almost all contributors can speak English, so English speakers are welcome to ask questions in [Discussion](https://github.com/cloudwu/skynet/discussions), or submit issues in English.
-
-## ǰ��
-#### ���ֿ�skynet֧��windows�����У�ֻ֧��visual studio 2013����ȷ����ı������Ѿ����SP4����
-#### ��Ϊ����Ҫ������ǿ��һ�飬������vs2013����SP4�������������������
-
-```
-�˰汾�޸��Թٷ���skynet���Ķ��������£�
-1��sproto�޸ģ�������real��˫���ȸ�����double����֧�֣��Լ�variant���ͣ�������real/int/string/bool����֧��
-2��windows�²�֧��epoll���ʲ���event-select����ģ��ģ��epoll����֤��С�Ķ�skynetԴ�������£�ʵ������ͨѶ
-3��windowsƽ̨��û��pipe���ݵĽӿڣ�������socket api��ģ����һ����
-4������̨���룬hack�޸���read������ģ���ȡfd 0(stdin)
-```
-
-## ����
-```
-windows��
-ʹ��visual studio 2013ֱ�Ӵ�build/vs2013/skynet.sln���ɣ�Ŀǰ��ʱֻ֧����һ���汾�ı�����
-
-linux/macos��
-�ٷ���һ��
-```
-
-## ����
-```
-windows��
-1������Ŀ¼����Ϊskynet.exe����Ŀ¼��Ĭ��Ϊ $(ProjectDir)..\..\
-2�������������Ϊconfig�ļ������·������ examples/config
-
-linux/macos��
-�͹ٷ���һ��
-```
 
 ## Build
 
