@@ -38,10 +38,15 @@ skynet_error(struct skynet_context * context, const char *msg, ...) {
 			va_start(ap,msg);
 			len = vsnprintf(data, max_size, msg, ap);
 			va_end(ap);
-			if (len < max_size) {
+			if (len >= 0 && len < max_size) {
 				break;
 			}
 			skynet_free(data);
+			if (len < 0 && max_size >= 1024 * 1024) {
+				// Windows vsnprintf returns -1 on truncation; give up after 1MB
+				perror("vsnprintf error :");
+				return;
+			}
 		}
 	}
 	if (len < 0) {

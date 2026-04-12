@@ -2,8 +2,8 @@
 #define SKYNET_RWLOCK_H
 
 #ifndef USE_PTHREAD_LOCK
-
 #include "atomic.h"
+#include <unistd.h>
 
 struct rwlock {
 	ATOM_INT write;

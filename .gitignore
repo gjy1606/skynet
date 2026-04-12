@@ -11,3 +11,24 @@
 *.dSYM
 .DS_Store
 .vscode
+
+# Windows: artifacts copied to repo root by copybin.bat
+/skynet.exe
+/lua.exe
+/lua.dll
+/posix.dll
+
+# OpenSSL 源码目录（只提交 openssl_win 中的必要文件）
+3rd/openssl-1.1.1w/
+3rd/openssl-1.1.1w.tar.gz
+
+# VS2013 临时产物
+*.sdf
+*.opensdf
+*.suo
+*.v12.suo
+*.vcxproj.user
+build/vs2013/output/
+build/vs2013/bin/
+.idea/
+.claude/

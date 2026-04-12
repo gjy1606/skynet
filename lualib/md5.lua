@@ -15,6 +15,11 @@ function core.sumhexa (k)
 		 end))
 end
 
+function core.sumhexa2 (k)
+	return core.sum(k)
+end
+
+
 local function get_ipad(c)
 	return string.char(c:byte() ~ 0x36)
 end

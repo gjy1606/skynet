@@ -48,6 +48,9 @@ const char * skynet_socket_udp_address(struct skynet_socket_message *, int *addr
 struct socket_info * skynet_socket_info();
 
 // legacy APIs
+#if defined(WIN32) && !defined(__cplusplus)
+#define inline __inline
+#endif
 
 static inline void sendbuffer_init_(struct socket_sendbuffer *buf, int id, const void *buffer, int sz) {
 	buf->id = id;

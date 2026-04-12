@@ -74,6 +74,9 @@ struct write_buffer_udp {
 	uint8_t udp_address[UDP_ADDRESS_SIZE];
 };
 
+#define SIZEOF_TCPBUFFER (offsetof(struct write_buffer, udp_address[0]))
+#define SIZEOF_UDPBUFFER (sizeof(struct write_buffer))
+
 struct wb_list {
 	struct write_buffer * head;
 	struct write_buffer * tail;
@@ -429,7 +432,9 @@ socket_server_create(uint64_t time) {
 	ss->event_index = 0;
 	memset(&ss->soi, 0, sizeof(ss->soi));
 	FD_ZERO(&ss->rfds);
+#ifndef _MSC_VER
 	assert(ss->recvctrl_fd < FD_SETSIZE);
+#endif
 
 	return ss;
 }
@@ -642,8 +647,13 @@ open_socket(struct socket_server *ss, struct request_open * request, struct sock
 			continue;
 		}
 		socket_keepalive(sock);
+#ifdef _MSC_VER
+		status = connect( sock, ai_ptr->ai_addr, ai_ptr->ai_addrlen);
+		sp_nonblocking(sock);
+#else
 		sp_nonblocking(sock);
 		status = connect( sock, ai_ptr->ai_addr, ai_ptr->ai_addrlen);
+#endif
 		if ( status != 0 && errno != EINPROGRESS) {
 			close(sock);
 			sock = -1;

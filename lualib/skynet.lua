@@ -502,6 +502,16 @@ function skynet.timeout(ti, func)
 	return co	-- for debug
 end
 
+function skynet.timer(ti, func)
+	local f
+	f = function()
+		if func(ti) then
+			skynet.timeout(ti, f)
+		end
+	end
+	skynet.timeout(ti, f)
+end
+
 local function suspend_sleep(session, token)
 	local tag = session_coroutine_tracetag[running_thread]
 	if tag then c.trace(tag, "sleep", 2) end
@@ -629,6 +639,13 @@ end
 
 function skynet.tracetag()
 	return session_coroutine_tracetag[running_thread]
+end
+
+function skynet.addtracepoint(info)
+	local tag = session_coroutine_tracetag[running_thread]
+	if tag then
+		c.trace(tag,info)
+	end
 end
 
 local starttime
@@ -1022,6 +1039,13 @@ end
 
 skynet.error = c.error
 skynet.tracelog = c.trace
+
+function skynet.log(msg, ...)
+    local msg = string.format(msg, ...)
+    msg = "[" .. os.date() .. "]" .. msg
+    
+    c.error(msg)
+end
 
 -- true: force on
 -- false: force off

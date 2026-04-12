@@ -98,9 +98,11 @@ thread_monitor(void *p) {
 	skynet_initthread(THREAD_MONITOR);
 	for (;;) {
 		CHECK_ABORT
+#ifndef _DEBUG
 		for (i=0;i<n;i++) {
 			skynet_monitor_check(m->m[i]);
 		}
+#endif
 		for (i=0;i<5;i++) {
 			CHECK_ABORT
 			sleep(1);
@@ -159,6 +161,13 @@ thread_worker(void *p) {
 	struct skynet_monitor *sm = m->m[id];
 	skynet_initthread(THREAD_WORKER);
 	struct message_queue * q = NULL;
+
+#ifdef _MSC_VER
+	unsigned int seed = (unsigned int)time(NULL) + id;
+	srand(seed);
+
+#endif
+
 	while (!m->quit) {
 		q = skynet_context_message_dispatch(sm, q, weight);
 		if (q == NULL) {
@@ -181,7 +190,12 @@ thread_worker(void *p) {
 
 static void
 start(int thread) {
+#ifdef _MSC_VER
+	assert(thread <= 32);
+	pthread_t pid[32+3];
+#else
 	pthread_t pid[thread+3];
+#endif
 
 	struct monitor *m = skynet_malloc(sizeof(*m));
 	memset(m, 0, sizeof(*m));
@@ -211,7 +225,11 @@ start(int thread) {
 		1, 1, 1, 1, 1, 1, 1, 1, 
 		2, 2, 2, 2, 2, 2, 2, 2, 
 		3, 3, 3, 3, 3, 3, 3, 3, };
+#ifdef _MSC_VER
+	struct worker_parm wp[32];
+#else
 	struct worker_parm wp[thread];
+#endif
 	for (i=0;i<thread;i++) {
 		wp[i].m = m;
 		wp[i].id = i;
@@ -233,8 +251,14 @@ start(int thread) {
 static void
 bootstrap(struct skynet_context * logger, const char * cmdline) {
 	int sz = strlen(cmdline);
+#ifdef _MSC_VER
+	assert(sz <= 1024);
+	char name[1024+1];
+	char args[1024+1];
+#else
 	char name[sz+1];
 	char args[sz+1];
+#endif
 	int arg_pos;
 	sscanf(cmdline, "%s", name);  
 	arg_pos = strlen(name);

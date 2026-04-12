@@ -26,6 +26,13 @@ local function sharetable_service()
 		end
 	end
 
+    local function get_refs(filename)
+        local m = files[filename]
+        local ptr = m:getptr()
+        local ref = matrix[ptr]
+        return ref and ref.refs
+    end
+
 	function sharetable.loadfile(source, filename, ...)
 		close_matrix(files[filename])
 		local m = core.matrix("@" .. filename, ...)
@@ -53,6 +60,22 @@ local function sharetable_service()
 		local ok, err = pcall(loadtable, filename, ptr, len)
 		skynet.trash(ptr, len)
 		assert(ok, err)
+		skynet.ret()
+	end
+
+    function sharetable.reloadtable(source, filename,notifyFunc, ptr, len)
+        local refs
+        if notifyFunc then
+            refs = get_refs(filename)
+        end
+		local ok, err = pcall(loadtable, filename, ptr, len)
+		skynet.trash(ptr, len)
+		assert(ok, err)
+        if notifyFunc and refs then
+            for source,_ in pairs(refs) do
+                skynet.send(source,"lua",notifyFunc,filename)
+            end
+        end
 		skynet.ret()
 	end
 
@@ -139,6 +162,27 @@ local function sharetable_service()
 		-- no return
 	end
 
+
+    function sharetable.update_table(source,funcName,name,ptr, len)
+        local oldM = files[name]
+        local ref,refs
+        if oldM then
+            local ptr = oldM:getptr()
+            ref = matrix[ptr]
+            if ref then
+                refs = ref.refs
+            end
+        end
+        sharetable.loadtable(source, name, ptr, len)
+        for source,_ in pairs(refs or {}) do
+            skynet.send(source,"lua",funcName,name)
+        end
+        if oldM and ref then
+            ref.count = 0
+            close_matrix(oldM)
+        end
+    end
+
 	skynet.dispatch("lua", function(_,source,cmd,...)
 		sharetable[cmd](source,...)
 	end)
@@ -212,10 +256,14 @@ function sharetable.loadstring(filename, source, ...)
 end
 
 function sharetable.loadtable(filename, tbl)
-	assert(type(tbl) == "table")
+	assert(type(tbl) == "table",filename)
 	skynet.call(sharetable.address, "lua", "loadtable", filename, skynet.pack(tbl))
 end
 
+function sharetable.reloadtable(filename, tbl,notifyFunc)
+    assert(type(tbl) == "table", filename)
+    skynet.call(sharetable.address, "lua", "reloadtable", filename,notifyFunc, skynet.pack(tbl))
+end
 
 local RECORD = {}
 function sharetable.query(filename)
@@ -494,5 +542,10 @@ function sharetable.update(...)
     end
 end
 
+
+function sharetable.update_table(funcName,name,tbl)
+    assert(type(tbl) == "table",name)
+    skynet.call(sharetable.address, "lua", "update_table",funcName ,name,skynet.pack(tbl))
+end
 return sharetable
 

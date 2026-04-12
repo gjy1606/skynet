@@ -453,7 +453,12 @@ static int
 lconnect(lua_State *L) {
 	size_t sz = 0;
 	const char * addr = luaL_checklstring(L,1,&sz);
+#ifdef _MSC_VER
+	assert(sz <= 1024);
+	char tmp[1024];
+#else
 	char tmp[sz];
+#endif
 	int port = 0;
 	const char * host = address_port(L, tmp, addr, 2, &port);
 	if (port == 0) {
@@ -640,7 +645,12 @@ ludp(lua_State *L) {
 	struct skynet_context * ctx = lua_touserdata(L, lua_upvalueindex(1));
 	size_t sz = 0;
 	const char * addr = lua_tolstring(L,1,&sz);
+#ifdef _MSC_VER
+	assert(sz <= 1024);
+	char tmp[1024];
+#else
 	char tmp[sz];
+#endif
 	int port = 0;
 	const char * host = NULL;
 	if (addr) {
@@ -661,7 +671,12 @@ ludp_connect(lua_State *L) {
 	int id = luaL_checkinteger(L, 1);
 	size_t sz = 0;
 	const char * addr = luaL_checklstring(L,2,&sz);
+#ifdef _MSC_VER
+	assert(sz <= 1024);
+	char tmp[1024];
+#else
 	char tmp[sz];
+#endif
 	int port = 0;
 	const char * host = NULL;
 	if (addr) {
@@ -680,7 +695,12 @@ ludp_dial(lua_State *L){
 	struct skynet_context * ctx = lua_touserdata(L, lua_upvalueindex(1));
 	size_t sz = 0;
 	const char * addr = luaL_checklstring(L, 1, &sz);
+#ifdef _MSC_VER
+	assert(sz <= 1024);
+	char tmp[1024];
+#else
 	char tmp[sz];
+#endif
 	int port = 0;
 	const char * host =  address_port(L, tmp, addr, 2, &port);
 
@@ -698,7 +718,12 @@ ludp_listen(lua_State *L){
 	struct skynet_context * ctx = lua_touserdata(L, lua_upvalueindex(1));
 	size_t sz = 0;
 	const char * addr = luaL_checklstring(L, 1, &sz);
+#ifdef _MSC_VER
+	assert(sz <= 1024);
+	char tmp[1024];
+#else
 	char tmp[sz];
+#endif
 
 	int port = 0;
 	const char * host = address_port(L, tmp, addr, 2, &port);

@@ -69,16 +69,28 @@ _cb(struct skynet_context * context, void * ud, int type, int session, uint32_t 
 	if (r == LUA_OK) {
 		return 0;
 	}
+	struct tm* p;
+	time_t ti;
+	ti = time(NULL);
+	p = localtime(&ti);
 	const char * self = skynet_command(context, "REG", NULL);
 	switch (r) {
 	case LUA_ERRRUN:
-		skynet_error(context, "lua call [%x to %s : %d msgsz = %d] error : " KRED "%s" KNRM, source , self, session, sz, lua_tostring(L,-1));
+		skynet_error(context, "[%d-%d-%d %d:%d:%d] lua call [%x to %s : %d msgsz = %d] error : " KRED "%s" KNRM, 
+			1900 + p->tm_year, p->tm_mon + 1, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec, source, self, session, sz, lua_tostring(L, -1));
 		break;
 	case LUA_ERRMEM:
-		skynet_error(context, "lua memory error : [%x to %s : %d]", source , self, session);
+		skynet_error(context, "[%d-%d-%d %d:%d:%d] lua memory error : [%x to %s : %d]", 
+			1900 + p->tm_year, p->tm_mon + 1, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec, source, self, session);
 		break;
 	case LUA_ERRERR:
-		skynet_error(context, "lua error in error : [%x to %s : %d]", source , self, session);
+		skynet_error(context, "[%d-%d-%d %d:%d:%d] lua error in error : [%x to %s : %d]", 
+			1900 + p->tm_year, p->tm_mon + 1, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec, source, self, session);
+		break;
+		//todo lua5.4 在没有该字段
+		/*case LUA_ERRGCMM:
+			skynet_error(context, "[%d-%d-%d %d:%d:%d] lua gc error : [%x to %s : %d]",
+			1900 + p->tm_year, p->tm_mon + 1, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec, source, self, session);*/
 		break;
 	};
 

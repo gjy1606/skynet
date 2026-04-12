@@ -22,6 +22,10 @@ static int sp_enable(poll_fd, int sock, void *ud, bool read_enable, bool write_e
 static int sp_wait(poll_fd, struct event *e, int max);
 static void sp_nonblocking(int sock);
 
+#ifdef _MSC_VER
+#include "socket_cpoll.h"
+#endif
+
 #ifdef __linux__
 #include "socket_epoll.h"
 #endif

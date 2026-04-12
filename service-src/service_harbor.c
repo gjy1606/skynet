@@ -336,14 +336,22 @@ send_remote(struct skynet_context * ctx, int fd, const char * buffer, size_t sz,
 		skynet_error(ctx, "remote message from :%08x to :%08x is too large.", cookie->source, cookie->destination);
 		return;
 	}
+#if defined(WIN32)
+	uint8_t * sendbuf = skynet_malloc(sz_header + 4);
+#else
 	uint8_t sendbuf[sz_header+4];
+#endif
 	to_bigendian(sendbuf, (uint32_t)sz_header);
 	memcpy(sendbuf+4, buffer, sz);
 	header_to_message(cookie, sendbuf+4+sz);
 
 	struct socket_sendbuffer tmp;
 	tmp.id = fd;
+#if defined(WIN32)
+	tmp.type = SOCKET_BUFFER_MEMORY;
+#else
 	tmp.type = SOCKET_BUFFER_RAWPOINTER;
+#endif
 	tmp.buffer = sendbuf;
 	tmp.sz = sz_header+4;
 
@@ -619,7 +627,12 @@ harbor_command(struct harbor * h, const char * msg, size_t sz, int session, uint
 	}
 	case 'S' :
 	case 'A' : {
+#ifdef _MSC_VER
+		assert(s <= 1024);
+		char buffer[1024+1];
+#else
 		char buffer[s+1];
+#endif
 		memcpy(buffer, name, s);
 		buffer[s] = 0;
 		int fd=0, id=0;

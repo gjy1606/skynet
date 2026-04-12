@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <unistd.h>
 #define OP_COMPRESSED 2012
 #define OP_MSG 2013
 
@@ -21,6 +22,7 @@ typedef enum {
 
 
 #define DEFAULT_CAP 128
+
 struct connection {
 	int sock;
 	int id;
