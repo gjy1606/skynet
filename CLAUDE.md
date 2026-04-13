@@ -12,7 +12,8 @@ Deltas relative to upstream:
 2. **`epoll` 用 `select` 模拟** —— shim 在 [build/vs2013/posix/cpoll/](build/vs2013/posix/cpoll/)
 3. **`pipe()` 用 loopback socket pair 模拟** —— Win32 无 pipe API 可被 socket poller 复用
 4. **`read(fd 0)` 被 hack** —— Windows 下可从 stdin 读取控制台输入
-5. **sproto 扩展**：加了 `real`（double）和 `variant`（real/int/string/bool）两种 field 类型
+
+> **注**：本分支**没有**对 sproto 做任何扩展。`lualib-src/sproto/sproto.c` 与 `sproto.h` 与上游 [cloudwu/sproto](https://github.com/cloudwu/sproto) 字节级一致（仅 CRLF 差异）。早期 README 声称的 "sproto 加了 `real`/`variant` 字段类型" 是错误的：`real(double)` 是上游 v1.8.0 之前就有的 `SPROTO_TDOUBLE`，`variant` 类型在本仓代码里全仓 grep 零匹配。
 
 ## Build
 
