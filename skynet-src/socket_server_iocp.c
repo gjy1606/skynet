@@ -760,7 +760,7 @@ post_accept(struct socket_server *ss, struct socket *listen_s) {
 
 static int
 post_write(struct socket_server *ss, struct socket *s, struct write_buffer *wb) {
-	if (s->write_posted || s->closing) return 0;
+	if (s->write_posted) return 0;
 	struct iocp_op *op = alloc_iocp_op(IOCP_OP_WRITE, s, 0);
 	op->buffer = wb->ptr;
 	op->wsa.buf = wb->ptr;
@@ -835,7 +835,7 @@ consume_write_buffer(struct socket_server *ss, struct socket *s, struct write_bu
 
 static void
 try_post_write(struct socket_server *ss, struct socket *s) {
-	if (s->write_posted || s->closing) return;
+	if (s->write_posted) return;
 	struct write_buffer *wb = next_write_buffer(s);
 	if (!wb) return;
 	post_write(ss, s, wb);
@@ -1657,8 +1657,10 @@ handle_write_complete(struct socket_server *ss, struct iocp_op *op, DWORD bytes,
 	}
 	s->write_posted = false;
 
-	// 检查是否需要延迟清理
-	check_delayed_close(ss, s);
+	// 不在这里调用 check_delayed_close：
+	// 若此时 closing=true 且 read_posted=false，提前清理会把队列里还未发送的
+	// write_buffer（如 HTTP body）一并释放，导致多段 write 只发出第一段。
+	// 正确做法是先尝试投递下一段，确认无后续写后再做延迟清理。
 
 	// 如果 socket 已经被清理或被重用，直接返回
 	if (ATOM_LOAD(&s->type) == SOCKET_TYPE_INVALID || op->sid != s->id) {
@@ -1668,6 +1670,7 @@ handle_write_complete(struct socket_server *ss, struct iocp_op *op, DWORD bytes,
 
 	struct write_buffer *wb = op->wb;
 	if (!wb) {
+		check_delayed_close(ss, s);
 		free_iocp_op(op, false);
 		return -1;
 	}
@@ -1677,11 +1680,19 @@ handle_write_complete(struct socket_server *ss, struct iocp_op *op, DWORD bytes,
 		wb->ptr += bytes;
 		wb->sz -= bytes;
 		try_post_write(ss, s);
+		// 只有在没有新写投递成功（write_posted 仍为 false）时才做延迟清理
+		if (!s->write_posted) {
+			check_delayed_close(ss, s);
+		}
 		free_iocp_op(op, false);
 		return -1;
 	}
 	consume_write_buffer(ss, s, wb);
 	try_post_write(ss, s);
+	// 只有在没有新写投递成功（write_posted 仍为 false）时才做延迟清理
+	if (!s->write_posted) {
+		check_delayed_close(ss, s);
+	}
 	free_iocp_op(op, false);
 	return -1;
 }
@@ -1724,7 +1735,10 @@ handle_io_completion(struct socket_server *ss, struct iocp_op *op, DWORD bytes, 
 			}
 			free_iocp_op(op, (op->op == IOCP_OP_READ || op->op == IOCP_OP_UDP_RECV));
 
-			// 检查是否需要延迟清理
+			// 注意：此路径对应 force_close → CancelIoEx 触发的 ABORTED
+			// 此时 op->wb（被取消的写操作）仍留在队列头，不能调用 try_post_write：
+			// 否则会把同一块 wb1 重新投递一遍，导致 TCP 数据重复。
+			// 应直接走延迟清理：check_delayed_close 会通过 free_wb_list 释放队列。
 			check_delayed_close(ss, s);
 			return -1;
 		}
