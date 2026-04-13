@@ -92,36 +92,61 @@ socket_keepalive(int fd) {
 int pipe(int fd[2]) {
 
 	int listen_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if(listen_fd == INVALID_SOCKET)
+		return -1;
+
+	// 让内核从 ephemeral 端口池中分配一个未占用端口；避免原来 srand+rand()%1000
+	// 在 60000-60999 这个窄段里碰撞 / TIME_WAIT 残留导致 bind 失败后死循环
 	struct sockaddr_in sin;
 	sin.sin_family = AF_INET;
 	sin.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
+	sin.sin_port = 0;
 
-	srand(time(NULL));
-	// use random port(range from 60000 to 60999) to simulate pipe()
-	for(;;) {
-		int port = 60000 + rand() % 1000;
-		sin.sin_port = htons(port);
-		if(!bind(listen_fd, (struct sockaddr*)&sin, sizeof(sin)))
-			break;
+	if(bind(listen_fd, (struct sockaddr*)&sin, sizeof(sin)) == SOCKET_ERROR) {
+		closesocket(listen_fd);
+		return -1;
 	}
 
-	listen(listen_fd, 5);
+	// 取回内核实际分配的端口号，供 connect 使用
+	int addr_len = sizeof(sin);
+	if(getsockname(listen_fd, (struct sockaddr*)&sin, &addr_len) == SOCKET_ERROR) {
+		closesocket(listen_fd);
+		return -1;
+	}
+
+	if(listen(listen_fd, 1) == SOCKET_ERROR) {
+		closesocket(listen_fd);
+		return -1;
+	}
+
 	printf("Windows sim pipe() listen at %s:%d\n", inet_ntoa(sin.sin_addr), ntohs(sin.sin_port));
 
 	socket_keepalive(listen_fd);
 
 	int client_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if(connect(client_fd, (struct sockaddr*)&sin, sizeof(sin)) == SOCKET_ERROR) {
+	if(client_fd == INVALID_SOCKET) {
 		closesocket(listen_fd);
 		return -1;
 	}
 
-    struct sockaddr_in client_addr;
-	size_t name_len = sizeof(client_addr);
-	int client_sock = accept(listen_fd, (struct sockaddr*)&client_addr, &name_len);
-	//FD_SET( clientSock, &g_fdClientSock);
+	if(connect(client_fd, (struct sockaddr*)&sin, sizeof(sin)) == SOCKET_ERROR) {
+		closesocket(client_fd);
+		closesocket(listen_fd);
+		return -1;
+	}
 
-	// TODO: close listen_fd
+	struct sockaddr_in client_addr;
+	int name_len = sizeof(client_addr);
+	int client_sock = accept(listen_fd, (struct sockaddr*)&client_addr, &name_len);
+
+	// accept 后立刻关掉 listen_fd：原实现这里留了 TODO，每次 pipe() 泄漏 1 个 socket
+	// （skynet 启动时 timer/socket/monitor 三条线程各调一次 = 每启动泄漏 3 个）
+	closesocket(listen_fd);
+
+	if(client_sock == INVALID_SOCKET) {
+		closesocket(client_fd);
+		return -1;
+	}
 
 	fd[0] = client_sock;
 	fd[1] = client_fd;
@@ -130,15 +155,6 @@ int pipe(int fd[2]) {
 	socket_keepalive(client_fd);
 
 	return 0;
-
-	////HANDLE hReadPipe, hWritePipe;
-	//SECURITY_ATTRIBUTES sa;
-	//sa.nLength = sizeof(SECURITY_ATTRIBUTES);
-	//sa.lpSecurityDescriptor = NULL;
-	//sa.bInheritHandle = TRUE;
-	//if(CreatePipe(&fd[0],&fd[1],&sa,0))
-	//	return 0;
-	//return -1;
 }
 
 int write(int fd, const void *ptr, size_t sz) {
