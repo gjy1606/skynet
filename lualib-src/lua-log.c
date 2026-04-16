@@ -41,12 +41,12 @@ typedef int                 BOOL;
 #include <signal.h>
 
 enum LogLevel {
-	kLogUnknown = 0,        // Î´Öª¼¶±ğ
-	kLogVerbose = 1,        // µ÷ÊÔ¼¶±ğ
-	kLogInfo = 2,        // ÌáÊ¾¼¶±ğ
-	kLogWarning = 3,        // ¾¯¸æ¼¶±ğ
-	kLogError = 4,        // ´íÎó¼¶±ğ
-	kLogMust = 5,        // ±ØĞëÏÔÊ¾µÄĞÅÏ¢
+	kLogUnknown = 0,        // æœªçŸ¥çº§åˆ«
+	kLogVerbose = 1,        // è°ƒè¯•çº§åˆ«
+	kLogInfo = 2,        // æç¤ºçº§åˆ«
+	kLogWarning = 3,        // è­¦å‘Šçº§åˆ«
+	kLogError = 4,        // é”™è¯¯çº§åˆ«
+	kLogMust = 5,        // å¿…é¡»æ˜¾ç¤ºçš„ä¿¡æ¯
 };
 
 struct LogStat {
@@ -59,7 +59,7 @@ struct LogStat {
 static struct LogStat log_stat;
 
 #ifdef _WIN32
-// ¼ÇÂ¼Ä¬ÈÏµÄÆÁÄ»ÉèÖÃ£¨ÑÕÉ«+±³¾°ÑÕÉ«£©
+// è®°å½•é»˜è®¤çš„å±å¹•è®¾ç½®ï¼ˆé¢œè‰²+èƒŒæ™¯é¢œè‰²ï¼‰
 static CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
 static BOOL initialized = FALSE;
 
@@ -161,34 +161,39 @@ static const char* getLevelStr(int level)
 
 static void flushLogMessage(int level, const char *message, struct tm *time)
 {
-	// ´Ëº¯ÊıÍ¬Ò»Ê±¼äÖ»ÄÜÓÉÒ»¸öÏß³Ìµ÷ÓÃ~~~
-	//  ÕâÀï½øĞĞ¼ÓËø
+	// æ­¤å‡½æ•°åŒä¸€æ—¶é—´åªèƒ½ç”±ä¸€ä¸ªçº¿ç¨‹è°ƒç”¨~~~
+	//  è¿™é‡Œè¿›è¡ŒåŠ é”
 	//static CLock lock;
 	//GUARD(&lock);
 
 #ifdef WIN32
-	// ¼ÇÂ¼Ä¬ÈÏµÄÆÁÄ»ÉèÖÃ£¨ÑÕÉ«+±³¾°ÑÕÉ«£©
+	// è®°å½•é»˜è®¤çš„å±å¹•è®¾ç½®ï¼ˆé¢œè‰²+èƒŒæ™¯é¢œè‰²ï¼‰
 	if (!initialized)
 	{
 		initialized = TRUE;
-		// ±£´æÔ­À´µÄConsoleĞÅÏ¢
+		// ä¿å­˜åŸæ¥çš„Consoleä¿¡æ¯
 		GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenInfo);
 	}
 
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), level_color[level]);
 #endif // WIN32
 
-	// win32Æ½Ì¨ÏÂÊä³öunicode×Ö·û´®
-	// linuxÏÂÖ±½ÓÊä³öutf8×Ö·û´®
+	// win32å¹³å°ä¸‹è¾“å‡ºunicodeå­—ç¬¦ä¸²
+	// linuxä¸‹ç›´æ¥è¾“å‡ºutf8å­—ç¬¦ä¸²
 #ifdef _WIN32
-	//mem::wstring ucs2 = string::Utf8ToUcs2(message);
-	//::WriteConsoleW(GetStdHandle(STD_OUTPUT_HANDLE), ucs2.c_str(), ucs2.length(), NULL, NULL);
-
-	int len = 0;
-	const char * msg = UTF8ToGBK(message, &len);
-	//WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), msg, len, NULL, NULL);
-
-	WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), message, strlen(message), NULL, NULL);
+	// UTF-8 â†’ UTF-16 â†’ WriteConsoleWï¼ˆæ­£ç¡®æ˜¾ç¤ºä¸­æ–‡ï¼Œä¸ä¾èµ– chcp/localeï¼‰
+	{
+		int msgLen = (int)strlen(message);
+		int wLen = MultiByteToWideChar(CP_UTF8, 0, message, msgLen, NULL, 0);
+		if (wLen > 0) {
+			wchar_t* wBuf = (wchar_t*)malloc(wLen * sizeof(wchar_t));
+			if (wBuf) {
+				MultiByteToWideChar(CP_UTF8, 0, message, msgLen, wBuf, wLen);
+				WriteConsoleW(GetStdHandle(STD_OUTPUT_HANDLE), wBuf, wLen, NULL, NULL);
+				free(wBuf);
+			}
+		}
+	}
 #elif defined ANDROID
 #define LOG_TAG "JNITag"
 	switch (level)
@@ -200,13 +205,13 @@ static void flushLogMessage(int level, const char *message, struct tm *time)
 		__android_log_print(ANDROID_LOG_INFO, LOG_TAG, message, "");
 		break;
 	case kLogWarning:
-		__android_log_print(ANDROID_LOG_WARN, LOG_TAG, message, ""); // LOGÀàĞÍ:warning
+		__android_log_print(ANDROID_LOG_WARN, LOG_TAG, message, ""); // LOGç±»å‹:warning
 		break;
 	case kLogError:
-		__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, message, ""); // LOGÀàĞÍ:error
+		__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, message, ""); // LOGç±»å‹:error
 		break;
 	case kLogMust:
-		__android_log_print(ANDROID_LOG_INFO, LOG_TAG, message, ""); // LOGÀàĞÍ:Verbose???
+		__android_log_print(ANDROID_LOG_INFO, LOG_TAG, message, ""); // LOGç±»å‹:Verbose???
 		break;
 	default:
 		__android_log_print(ANDROID_LOG_INFO, LOG_TAG, message, "");
@@ -216,7 +221,7 @@ static void flushLogMessage(int level, const char *message, struct tm *time)
 	fflush(stdout);
 #endif // _WIN32
 
-	// ´´½¨Ä¿Â¼
+	// åˆ›å»ºç›®å½•
 	mkdir(log_stat.directory == NULL ? "log" : log_stat.directory
 #ifndef _WIN32
 		, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH | S_IXOTH
@@ -250,7 +255,7 @@ static void flushLogMessage(int level, const char *message, struct tm *time)
 	}
 
 #ifdef WIN32
-	// ½«Êä³öÎÄ×ÖÊôĞÔ»¹Ô­
+	// å°†è¾“å‡ºæ–‡å­—å±æ€§è¿˜åŸ
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), ScreenInfo.wAttributes);
 #endif // WIN32
 }
@@ -279,10 +284,10 @@ static int user_log(int level, const char *module, BOOL pureFormat, const char *
 
 #ifdef _WIN32
 	//_locale_t locale = _create_locale(); // (LC_ALL, "C");
-	// vsnprintfÔÚwindowsºÍlinuxÏÂĞĞÎª²»Ò»ÖÂ£¬µ±»º³åÇø²»¹»³¤Ê±£¬linux°Ñ×îºóÒ»¸ö×Ö·ûÌîĞ´Îª'\0',windows²»»á
-	//  Á½Õß·µ»ØµÄ³¤¶ÈÔÚÈÎºÎÇé¿öÏÂ¶¼²»°üº¬×îºóµÄ'\0'
+	// vsnprintfåœ¨windowså’Œlinuxä¸‹è¡Œä¸ºä¸ä¸€è‡´ï¼Œå½“ç¼“å†²åŒºä¸å¤Ÿé•¿æ—¶ï¼ŒlinuxæŠŠæœ€åä¸€ä¸ªå­—ç¬¦å¡«å†™ä¸º'\0',windowsä¸ä¼š
+	//  ä¸¤è€…è¿”å›çš„é•¿åº¦åœ¨ä»»ä½•æƒ…å†µä¸‹éƒ½ä¸åŒ…å«æœ€åçš„'\0'
 	//walk += _vsnprintf_l(walk, sizeof(buffer) - strlen(buffer) - (pureFormat ? 0 : 4), msgfmt, locale, ap);
-	walk += sprintf(walk, "%s", msgfmt); // ½Å±¾²ãÒÑ¾­½øĞĞ×Ö·û´®¸ñÊ½»¯ÁË£¬ËùÒÔÕâÀï²»ĞèÒª ap
+	walk += sprintf(walk, "%s", msgfmt); // è„šæœ¬å±‚å·²ç»è¿›è¡Œå­—ç¬¦ä¸²æ ¼å¼åŒ–äº†ï¼Œæ‰€ä»¥è¿™é‡Œä¸éœ€è¦ ap
 	//_free_locale(locale);
 #else
 	walk += (int)(_vsnprintf(walk, sizeof(buffer) - strlen(buffer) - (pureFormat ? 0 : 4), msgfmt, ap));
@@ -290,7 +295,7 @@ static int user_log(int level, const char *module, BOOL pureFormat, const char *
 
 	if (!pureFormat)
 		walk += sprintf(walk, "\r\n");
-	// Ìí¼Ó½áÊø·û
+	// æ·»åŠ ç»“æŸç¬¦
 	*walk++ = '\0';
 
 	flushLogMessage(level, buffer, t);
@@ -342,11 +347,11 @@ lcolorPrint(lua_State *L){
 #ifdef WIN32
 	const char * msgfmt = luaL_checkstring(L, 1);
 	int color = lua_tointeger(L, 2);
-	// ¼ÇÂ¼Ä¬ÈÏµÄÆÁÄ»ÉèÖÃ£¨ÑÕÉ«+±³¾°ÑÕÉ«£©
+	// è®°å½•é»˜è®¤çš„å±å¹•è®¾ç½®ï¼ˆé¢œè‰²+èƒŒæ™¯é¢œè‰²ï¼‰
 	if (!initialized)
 	{
 		initialized = TRUE;
-		// ±£´æÔ­À´µÄConsoleĞÅÏ¢
+		// ä¿å­˜åŸæ¥çš„Consoleä¿¡æ¯
 		GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenInfo);
 	}
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color);
