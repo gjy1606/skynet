@@ -221,11 +221,13 @@ static void flushLogMessage(int level, const char *message, struct tm *time)
 	fflush(stdout);
 #endif // _WIN32
 
+	// Windows: 文件由 logger.lua (snlua) 统一写，lualog 只负责控制台输出
+	// 避免两个 FILE* 写同名文件导致内容交错/多余换行
+	// Linux/Android: lualog 自己写文件
+#ifndef _WIN32
 	// 创建目录
 	mkdir(log_stat.directory == NULL ? "log" : log_stat.directory
-#ifndef _WIN32
 		, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH | S_IXOTH
-#endif // _WIN32
 		);
 
 	if (log_stat.file == NULL || log_stat.time.tm_mday != time->tm_mday)
@@ -253,6 +255,7 @@ static void flushLogMessage(int level, const char *message, struct tm *time)
 		fwrite(message, 1, strlen(message), log_stat.file);
 		fflush(log_stat.file);
 	}
+#endif // !_WIN32
 
 #ifdef WIN32
 	// 将输出文字属性还原
